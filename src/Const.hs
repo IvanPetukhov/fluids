@@ -10,7 +10,7 @@ winSizeX = 720
 
 -- Высота окна
 winSizeY :: Float
-winSizeY = 620
+winSizeY = 480
 
 -- Ширина границ
 boxX :: Float
