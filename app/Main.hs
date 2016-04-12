@@ -1,6 +1,5 @@
 module Main where
 
-import Lib
 import Computing
 import Types
 import Const
@@ -9,11 +8,20 @@ import Graphics.Gloss.Data.ViewPort
 
 -- Создание одной частицы
 initialPar :: Point -> Particle
-initialPar pos = (Particle pos  (0,0) (0,0) 0 0 (makeColor 0 0 1 1)) 
+initialPar pos = (Particle pos  (0,0) (0,0) 0 0 (makeColor 0 0 1 0.7)) 
 
 -- Создание всех частиц
 initialPars :: [Particle]
-initialPars = [(initialPar (x , y)) | x <- [-100,-80..(150)] , y <- [-150,-130..(100)] ]
+initialPars = [(initialPar (x , y)) | x <- posxCalc , y <- posyCalc]
+
+
+-- 
+posxCalc :: [Float]
+posxCalc = [(0 - pRadius * 2000 * numX / 2), (0 - pRadius * 2000 * numX / 2 + pRadius * 2000) .. ((pRadius * 2000 * numX / 2 - pRadius * 2000))]
+
+
+posyCalc :: [Float]
+posyCalc = [(0 - pRadius * 2000 * numY / 2), (0 - pRadius * 2000 * numY / 2 + pRadius * 2000) .. ((pRadius * 2000 * numY / 2 - pRadius * 2000))]
 
 --Создание границ
 initialBorders :: [Border]
@@ -26,7 +34,7 @@ initialRoom = (Pic initialPars initialBorders)
 
 -- Отрисовка одной частицы
 drawPar :: Particle ->  Picture
-drawPar (Particle (x , y)  _ _ _ _ c) = translate x y (scale 2 2 (color c ( thickCircle pRadius  (pRadius * 2))))
+drawPar (Particle (x , y)  _ _ _ _ c) = translate x y (scale parScale parScale (color c ( thickCircle (pRadius * 1000 / 2) (pRadius * 1000))))
 
 -- Щтрисовка прямоугольников
 drawPol1 :: Picture
@@ -78,7 +86,7 @@ restart _ = initialRoom
 
 
 updatePic :: Float -> Pic -> Pic
-updatePic time (Pic ps bs) = (Pic (newPar ps bs (time * 5)) bs)
+updatePic time (Pic ps bs) = (Pic (newPar ps bs (time * 10)) bs)
                            
 
 
@@ -87,7 +95,7 @@ main = do
   play display bgColor fps initialRoom drawPic handlePic updatePic
   where
     windowSize   = ((truncate winSizeX ) , (truncate winSizeY))
-    windowOffset = (250 , 250)
+    windowOffset = (250, 250)
     display = InWindow "Fluids" windowSize windowOffset
-    bgColor = (makeColor 1.0 0.8 0.8 1)
-    fps = 30
+    bgColor = (makeColor 0.1 0.8 0.8 1)
+    fps = 60

@@ -48,7 +48,7 @@ densSumOne (Particle (x,y) v a p d c) ps = changePart
 
 -- Сила давления для 2-х частиц
 f_press :: Particle -> Particle -> Point
-f_press (Particle (x, y) (vX, vY) a p d c) (Particle (x1, y1) (v1X, v1Y) a1 p1 d1 c1) = (fPressX, fPressY)
+f_press (Particle (x, y) _ _ p _ _) (Particle (x1, y1) _ _ p1 d1 _) = (fPressX, fPressY)
 	where
 		distX = (x - x1) / 1000
 		distY = (y - y1) / 1000
@@ -61,7 +61,7 @@ f_press (Particle (x, y) (vX, vY) a p d c) (Particle (x1, y1) (v1X, v1Y) a1 p1 d
 
 -- Сила вязкости для 2-х частиц
 f_vis :: Particle -> Particle -> Point
-f_vis (Particle (x, y) (vX, vY) a p d c) (Particle (x1, y1) (v1X, v1Y) a1 p1 d1 c1) = (fViscX, fViscY)
+f_vis (Particle (x, y) (vX, vY) _ _ _ _) (Particle (x1, y1) (v1X, v1Y) _ _ d1 _) = (fViscX, fViscY)
      where
      	distX = (x - x1) / 1000
      	distY = (y - y1) / 1000
