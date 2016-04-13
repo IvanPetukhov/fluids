@@ -4,7 +4,7 @@ import Graphics.Gloss.Interface.Pure.Game
 
 --Начальная позиция по Х
 startX :: Float
-startX = -100
+startX = 0
 
 --Расстояние по Х между частицами
 disX :: Float
@@ -12,7 +12,7 @@ disX = pRadius * 1000 * 2
 
 --Начальная позиция по У
 startY :: Float
-startY = -150
+startY = 100
 
 --Расстояние по У между частицами
 disY :: Float
@@ -36,11 +36,11 @@ winSizeY = 620
 
 -- Ширина границ
 boxX :: Float
-boxX = 200
+boxX = 250
 
 -- Высота границ
 boxY :: Float
-boxY = 150
+boxY = 180
 
 -- Масштаб отрисовки частицы
 parScale :: Float

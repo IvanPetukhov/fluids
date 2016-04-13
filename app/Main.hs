@@ -17,16 +17,17 @@ initialPars = [(initialPar (x , y)) | x <- posxCalc , y <- posyCalc]
 
 -- 
 posxCalc :: [Float]
-posxCalc = [(0 - pRadius * 2000 * numX / 2), (0 - pRadius * 2000 * numX / 2 + pRadius * 2000) .. ((pRadius * 2000 * numX / 2 - pRadius * 2000))]
+posxCalc = [(startX - pRadius * 2000 * numX / 2), (startX - pRadius * 2000 * numX / 2 + pRadius * 2000) .. (startX + (pRadius * 2000 * numX / 2 - pRadius * 2000))]
 
 
 posyCalc :: [Float]
-posyCalc = [(0 - pRadius * 2000 * numY / 2), (0 - pRadius * 2000 * numY / 2 + pRadius * 2000) .. ((pRadius * 2000 * numY / 2 - pRadius * 2000))]
+posyCalc = [(startY - pRadius * 2000 * numY / 2), (startY - pRadius * 2000 * numY / 2 + pRadius * 2000) .. (startY + (pRadius * 2000 * numY / 2 - pRadius * 2000))]
 
 --Создание границ
 initialBorders :: [Border]
 initialBorders = [(Border [(-boxX, -boxY) , (-boxX, boxY)] (makeColor 0 0 0 1) (1, 0)) , (Border [(-boxX, boxY) , (boxX , boxY)] (makeColor 0 0 0 1) (0, -1))
-                , (Border [(boxX , boxY) , (boxX, -boxY)] (makeColor 0 0 0 1) (-1, 0)) , (Border [(boxX , -boxY) , (-boxX , -boxY)] (makeColor 0 0 0 1) (0,1))]
+                , (Border [(boxX , boxY) , (boxX, -boxY)] (makeColor 0 0 0 1) (-1, 0)) , (Border [(boxX , -boxY) , (-boxX , -boxY)] (makeColor 0 0 0 1) (0, 1)),
+                (Border [(-150, 50) , (-50, -50)] (makeColor 0 0 0 1) (1, 1)), (Border [(50, -50) , (150, 50)] (makeColor 0 0 0 1) (-1, 1))]
 
 -- Создание картинки
 initialRoom :: Pic
@@ -36,7 +37,7 @@ initialRoom = (Pic initialPars initialBorders)
 drawPar :: Particle ->  Picture
 drawPar (Particle (x , y)  _ _ _ _ c) = translate x y (scale parScale parScale (color c ( thickCircle (pRadius * 1000 / 2) (pRadius * 1000))))
 
--- Щтрисовка прямоугольников
+--  Отрисовка прямоугольников
 drawPol1 :: Picture
 drawPol1 = (color (makeColor 1 0.8 0.8 1) (Polygon [( -winSizeX / 2, -winSizeY / 2) , ( -winSizeX / 2, winSizeY / 2) ,
                                                     ( -boxX, winSizeY / 2) , ( -boxX, -winSizeY / 2)]))
@@ -50,14 +51,16 @@ drawPol3 = (color (makeColor 1 0.8 0.8 1) (Polygon [( boxX, -winSizeY / 2) , ( w
 drawPol4 :: Picture
 drawPol4 = (color (makeColor 1 0.8 0.8 1) (Polygon [( winSizeX / 2, winSizeY / 2) , ( -winSizeX / 2, winSizeY / 2) ,
                                                     ( -winSizeX / 2, boxY) , ( winSizeX / 2, boxY)]))
-
+drawPol5 :: Picture
+drawPol5 = (color (makeColor 0.5 0.8 0.8 1) (Polygon [( winSizeX / 2, winSizeY / 2) , ( -winSizeX / 2, winSizeY / 2) ,
+                                                    ( -winSizeX / 2, boxY)]))
 -- Отрисовка границ
 drawBorder :: Border -> Picture
 drawBorder (Border path c _) = (color c (line path))
 
 -- Отрисовка картнки
 drawPic :: Pic ->Picture
-drawPic (Pic ps bs) = pictures ((map drawPar ps) ++ (drawPol1 : drawPol2 : drawPol3 : drawPol4 : [])++ (map drawBorder bs))
+drawPic (Pic ps bs) = pictures ((map drawPar ps) ++ (drawPol5 : [])++ (map drawBorder bs))
 
 handlePic :: Event -> Pic -> Pic
 handlePic (EventKey (MouseButton LeftButton) Down _ (x , y)) = addPart (x , y )
