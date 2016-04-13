@@ -123,13 +123,6 @@ lenVector (x1, y1) (x2, y2) = len
 	where
 		len = sqrt ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
 
-normalize :: Point -> Point
-normalize (x ,y) = normVec
-	where
-		x1 = x / (lenVector (0, 0) (x, y))
-		y1 = y / (lenVector (0, 0) (x, y))
-		normVec = (x1, y1)
-
 -- Удары об стену
 borderCross :: Particle -> Border ->  Point
 borderCross  (Particle (x, y) (vx, vy) _ _ _ _) (Border [(x1, y1), (x2, y2)] _ (nx, ny))  = addAcc
@@ -145,8 +138,6 @@ borderCross  (Particle (x, y) (vx, vy) _ _ _ _) (Border [(x1, y1), (x2, y2)] _ (
   	addAccY = wallCoef * ny * dot + reboundY
   	condX = (lenVector (x, y) (x1, y1)) <= (lenVector (x1, y1) (x2, y2)) + 10
   	condY = (lenVector (x, y) (x2, y2)) <= (lenVector (x1, y1) (x2, y2)) + 10
-  	--condX = (\a b m -> if (a > b) then m >= b && m <= a else m >= a && m <= b) x1 x2 x
-  	--condY = (\a b m -> if (a > b) then m >= b && m <= a else m >= a && m <= b) y1 y2 y
   	addAcc = if dot > 0 && dot < 20 && condY && condX then (addAccX , addAccY) else (0 , 0)
 
 -- Удары со всеми стенами
