@@ -71,12 +71,8 @@ presCoef::Fractional a => a
 presCoef = - 0.0001
 
 --  Отскок от стены.
-wallCoef::Fractional a => a
-wallCoef = 30
-
---  Потеря энергии при отскоке.
-wallEn::Fractional a => a
-wallEn = - 2
+wallCoef::Float
+wallCoef = 0.95
 
 -- Ускорение свободного падения
 grav :: Point
@@ -90,5 +86,8 @@ hardCoef = 1.0
 defDen::Fractional a => a
 defDen = 998.0
 
+-- Добавочное ускорение
+accPlus::Float
+accPlus = 5
 
 
