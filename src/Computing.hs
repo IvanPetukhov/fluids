@@ -3,6 +3,9 @@ import Types
 import Const
 import Graphics.Gloss.Interface.Pure.Game
 
+import Data.Maybe (mapMaybe)
+import Data.List (sortBy)
+import Data.Ord (comparing)
 
 coef :: Float
 coef = 315.0 / (64.0 * pi * deg)
@@ -35,70 +38,83 @@ densForTwo (Particle (x, y) _ _ _ _ _) (Particle (x1, y1) _ _ _ _ _) = res
             	distX = (x - x1) / 1000
             	distY = (y - y1) / 1000
                	dist = sqrt(distX * distX + distY * distY) 
-               	res | dist > hSm = 0
-               	    | otherwise = pMass * wpoly6 dist
+--              res | ((dist > hSm) && (t == t1)) = 0
+--                  | (t == t1) = pMass * wpoly6 dist
+--                  | otherwise = 0
+                res | dist > hSm = 0
+                    | otherwise = pMass * wpoly6 dist
 
 -- Суммарная плотность и давление для одной частицы
 densSumOne :: Particle -> [Particle] -> Particle
-densSumOne (Particle (x,y) v a p d c) ps = changePart
+densSumOne (Particle (x,y) v p d c aP t) ps = changePart
 	where
-		newDen = sum (map (densForTwo (Particle (x, y) v a p d c)) ps)
+		newDen = sum (map (densForTwo (Particle (x, y) v p d c aP t)) ps)
 		newPress = hardCoef * (newDen - defDen)
-		changePart = (Particle (x, y) v a newPress newDen c)
+		changePart = (Particle (x, y) v newPress newDen c aP t)
 
 -- Сила давления для 2-х частиц
 f_press :: Particle -> Particle -> Point
-f_press (Particle (x, y) _ _ p _ _) (Particle (x1, y1) _ _ p1 d1 _) = (fPressX, fPressY)
-	where
-		distX = (x - x1) / 1000
-		distY = (y - y1) / 1000
-		dist = sqrt (distX * distX + distY * distY)
-
-		fPressX | ((dist > hSm) || (d1 ==0)) = 0
-		        | otherwise = fst (wpoly6GradV (distX, distY) dist) * pMass * (p + p1)  / (2 * d1)
-		fPressY | ((dist > hSm) || (d1 ==0)) = 0
-		        | otherwise = snd (wpoly6GradV (distX, distY) dist) * pMass * (p + p1)  / (2 * d1) 
+f_press (Particle (x, y) _ p _ _ _ t) (Particle (x1, y1) _ p1 d1 _ _ t1) = (fPressX, fPressY)
+  where
+    distX = (x - x1) / 1000
+    distY = (y - y1) / 1000
+    dist = sqrt (distX * distX + distY * distY)
+--    fPressX | (((dist > hSm) || (d1 == 0)) && (t == t1)) = 0
+--            | (t == t1) = fst (wpoly6GradV (distX, distY) dist) * pMass * (p + p1)  / (2 * d1)
+--            | otherwise = 0
+--    fPressY | (((dist > hSm) || (d1 == 0)) && (t == t1)) = 0
+--            | (t == t1) = snd (wpoly6GradV (distX, distY) dist) * pMass * (p + p1)  / (2 * d1)
+--		        | otherwise = 0
+    fPressX | ((dist > hSm) || (d1 == 0)) = 0
+            | otherwise = fst (wpoly6GradV (distX, distY) dist) * pMass * (p + p1)  / (2 * d1)
+    fPressY | ((dist > hSm) || (d1 == 0)) = 0
+            | otherwise = snd (wpoly6GradV (distX, distY) dist) * pMass * (p + p1)  / (2 * d1)
 
 -- Сила вязкости для 2-х частиц
 f_vis :: Particle -> Particle -> Point
-f_vis (Particle (x, y) (vX, vY) _ _ _ _) (Particle (x1, y1) (v1X, v1Y) _ _ d1 _) = (fViscX, fViscY)
-     where
-     	distX = (x - x1) / 1000
-     	distY = (y - y1) / 1000
-     	dist = sqrt (distX * distX + distY * distY)
-     	fViscX | ((dist > hSm) || (d1 ==0)) = 0
-               | otherwise = viscCoef * pMass * (vX - v1X) / d1 * wpoly6DGrad dist
-        fViscY | ((dist > hSm) || (d1 ==0)) = 0
-               | otherwise = viscCoef * pMass * (vY - v1Y) / d1 * wpoly6DGrad dist
+f_vis (Particle (x, y) (vX, vY) _ _ _ _ t) (Particle (x1, y1) (v1X, v1Y) _ d1 _ _ t1) = (fViscX, fViscY)
+  where
+    distX = (x - x1) / 1000
+    distY = (y - y1) / 1000
+    dist = sqrt (distX * distX + distY * distY)
+    fViscX | (((dist > hSm) || (d1 ==0)) && (t == t1)) = 0
+           | (t == t1) = viscCoef * pMass * (vX - v1X) / d1 * wpoly6DGrad dist
+           | otherwise = 0
+    fViscY | (((dist > hSm) || (d1 ==0)) && (t == t1)) = 0
+           | (t == t1) = viscCoef * pMass * (vY - v1Y) / d1 * wpoly6DGrad dist
+           | otherwise = 0
 -- Натяжение
 f_tensGrad :: Particle -> Particle -> Point
-f_tensGrad (Particle (x , y) _ _ _ _ _) (Particle (x1 , y1) _ _ _ dens _) = res
+f_tensGrad (Particle (x , y) _ _ _ _ _ t) (Particle (x1 , y1) _ _ dens _ _ t1) = res
   where
-  	distX = (x - x1) / 1000
-	distY = (y - y1) / 1000
-	dist = sqrt (distX * distX + distY * distY)
-	grad = (wpoly6GradV (distX, distY) dist)
-	fx | dens == 0 = 0
-	   | otherwise = (fst grad) / dens
-	fy | dens ==0 = 0
-	   | otherwise = (snd grad) / dens
-	res = (fx, fy)
+    distX = (x - x1) / 1000
+    distY = (y - y1) / 1000
+    dist = sqrt (distX * distX + distY * distY)
+    grad = (wpoly6GradV (distX, distY) dist)
+    fx | ((dens == 0) && (t == t1)) = 0
+       | (t == t1) = (fst grad) / dens
+       | otherwise = 0
+    fy | ((dens == 0) && (t == t1)) = 0
+       | (t == t1) =  (snd grad) / dens
+       | otherwise = 0
+    res = (fx, fy)
 
 -- Сила натяжения коэф
 f_tens :: Particle -> Particle ->Float
-f_tens (Particle (x, y) _ _ _ _ _) (Particle (x1, y1) _ _ _ dens _) = tens
+f_tens (Particle (x, y) _ _ _ _ _ t) (Particle (x1, y1) _ _ dens _ _ t1) = tens
   where
-	distX = (x - x1) / 1000
-	distY = (y - y1) / 1000
-	tens | dens == 0 = 0
-	     | otherwise = (wpoly6DGrad dist) / dens
-	dist = sqrt(distX * distX + distY * distY)
+    distX = (x - x1) / 1000
+    distY = (y - y1) / 1000
+    tens | ((dens == 0) && (t == t1)) = 0
+         | (t == t1) = (wpoly6DGrad dist) / dens
+         | otherwise = 0
+    dist = sqrt(distX * distX + distY * distY)
 
  -- Расчет ускорения
-acceleration :: Particle -> [Particle] -> Particle
-acceleration (Particle (x, y) v a p d c) ps = (Particle (x,y) v accel p d c)
+acceleration :: Particle -> [Particle] -> Point
+acceleration (Particle (x, y) v p d c aP t) ps = accel
 	where
-	  part = (Particle (x , y) v a p d c)
+	  part = (Particle (x , y) v p d c aP t)
 	  fPress = map ( \x -> f_press part x) ps
 	  f_pressX = ( sum ( map (fst) fPress)) * presCoef
 	  f_pressY = (sum (map (snd) fPress)) * presCoef
@@ -113,10 +129,10 @@ acceleration (Particle (x, y) v a p d c) ps = (Particle (x,y) v accel p d c)
 	  f_tensSumY = (sum f_tensGradY) * pMass
 	  coefTens = (sum f_tensCoef) * pMass
 	  normGrad = (sqrt (f_tensSumX * f_tensSumX + f_tensSumY * f_tensSumY))
-	  tens =    if (normGrad > 30) then ( - coefTens / normGrad) else 0
+	  tens =    if (normGrad > 20) then ( - coefTens / normGrad) else 0
 	  f_tensX = f_tensSumX * tens * surfTens
 	  f_tensY = f_tensSumY * tens * surfTens  
-	  accel = (( f_pressX + f_visX + f_tensX + (fst grav)  ) , ( f_pressY + f_visY + f_tensY + (snd grav)  ))
+	  accel = ((f_pressX + f_visX + f_tensX + (fst grav)), (f_pressY + f_visY + f_tensY + (snd grav)))
 
 lenVector :: Point -> Point -> Float
 lenVector (x1, y1) (x2, y2) = len
@@ -124,51 +140,73 @@ lenVector (x1, y1) (x2, y2) = len
 		len = sqrt ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
 
 -- Удары об стену
-borderCross :: Particle -> Border ->  Point
-borderCross  (Particle (x, y) (vx, vy) _ _ _ _) (Border [(x1, y1), (x2, y2)] _ (nx, ny))  = addAcc
+borderCross :: Float -> Particle -> Border -> Maybe (Particle, Float)
+borderCross  time p@(Particle (x, y) (vx, vy) pr den col aP t) (Border [(x1, y1), (x2, y2)] _ (nx, ny))
+  | dot * dot1 >= 0 = Nothing
+  | otherwise = Just (Particle (xb, yb) (vnX, vnY) pr den col aP t, th1)
   where
-  	midX = (\x y -> if (x == y) then x else (y + x) / 2) x1 x2
-  	midY = (\x y -> if (x == y) then x else (y + x) / 2) y1 y2
-  	distX = midX - x
-  	distY = midY - y
-  	dot = nx * distX + ny * distY
-  	reboundX = wallEn * (vx * nx + vy * ny) * nx
-  	reboundY = wallEn * (vx * nx + vy * ny) * ny
-  	addAccX = wallCoef * nx * dot + reboundX
-  	addAccY = wallCoef * ny * dot + reboundY
-  	condX = (lenVector (x, y) (x1, y1)) <= (lenVector (x1, y1) (x2, y2)) + 10
-  	condY = (lenVector (x, y) (x2, y2)) <= (lenVector (x1, y1) (x2, y2)) + 10
-  	addAcc = if dot > 0 && dot < 20 && condY && condX then (addAccX , addAccY) else (0 , 0)
 
+    distX = x1 - x
+    distY = y1 - y
+    dot = nx * distX + ny * distY
+
+    xn = x + vx * time
+    yn = y + vy * time
+    
+    distX1 = x1 - xn
+    distY1 = y1 - yn
+    dot1 = nx * distX1 + ny * distY1
+
+    ua = ((xn - x) * (y1 - y) - (yn - y) * (x1 - x)) / ((yn - y) * (x2 - x1) - (xn - x) * (y2 - y1))
+
+    xb = x1 + ua * (x2 - x1)
+    yb = y1 + ua * (y2 - y1)
+    
+    th | vy /= 0   = (yb - y) / vy
+       | otherwise = (xb - x) / vx
+    
+    th1 = time - th
+
+    vnX = wallCoef * (vx + 2 * nx * abs vx)
+    vnY = wallCoef * (vy + 2 * ny * abs vy)
+    
 -- Удары со всеми стенами
-bordersCross :: [Border] -> Particle -> Point
-bordersCross bs (Particle (x, y) (vx, vy) (ax, ay) pr den col) = addAcc
+bordersCross :: Float -> [Border] -> Particle -> (Particle, Float)
+bordersCross time bs p = case sortBy (comparing snd) (mapMaybe (borderCross time p) bs) of
+  [] -> (p, time)
+  ((p', t'):_) -> bordersCross t' bs p'
+
+equ :: Particle -> Particle -> Bool
+equ (Particle (x, y) (vx, vy) _ _ _ _ _) (Particle (x1, y1) (vx1, vy1) _ _ _ _ _) = res
   where
-  	par = (Particle (x, y) (vx, vy) (ax, ay) pr den col)
-  	allBor = map (\x -> borderCross par x) bs
-  	addAccX = sum (map (\x -> (fst x)) allBor)
-  	addAccY = sum (map (\x -> (snd x)) allBor)
-  	addAcc = (ax + addAccX , ay + addAccY)
+    res = (x == x1) && (y == y1) && (vx == vx1) && (vy == vy1)
 
 -- Получение нового положения и новой скорости
-newValues :: Particle -> [Border] -> Float-> Particle 
-newValues (Particle (x, y) (vx, vy) (ax, ay) pr den col) bs time = (Particle (x1, y1) (vx1, vy1) (ax1, ay1) pr den col)
+newValues :: Particle -> [Particle] -> Float -> Float -> [Border] -> Float-> Particle
+newValues (Particle (x, y) (vx, vy) pr den col aP t) ps axp ayp bs time = parf
   where
-  	par = (Particle (x, y) (vx, vy) (ax, ay) pr den col)
-  	newAcc = bordersCross bs par
-  	ax1 = fst newAcc
-  	ay1 = snd newAcc
-  	x1 = x + vx * time + ax1 * time * time / 2
-  	y1 = y + vy * time + ay1 * time * time / 2
-  	vx1 = (x1 - x) / time
-  	vy1 = (y1 - y) / time
+    par0 = (Particle (x, y) (vx, vy) pr den col aP t)
+    ax = fst (acceleration par0 ps)
+    ay = snd (acceleration par0 ps)
+    ax1 = ax + axp
+    ay1 = ay + ayp
+    vx1 = vx + ax1 * time
+    vy1 = vy + ay1 * time
+    par = Particle (x, y) (vx1, vy1) pr den col aP t
+    (Particle (x', y') (vx', vy') _ _ _ _ _, time') = bordersCross time bs par
+    parf = (Particle (x' + vx' * time', y' + vy' * time') (vx', vy') pr den col aP t)
 
 -- Обновление списка частиц
-newPar :: [Particle] -> [Border] -> Float -> [Particle]
-newPar ps bs time = map (\z -> newValues z bs time) newAcc
+newPar :: [Particle] -> Float ->[Border] -> Float -> [Particle]
+newPar ps a bs time = map (\z -> newValues z ps ax ay bs time) newDen
   where
     newDen = map (\x -> densSumOne x ps) ps
-    newAcc = map (\y -> acceleration y ps) newDen
+    ax | a == 1 = accPlus
+       | a == 3 = - accPlus
+       | otherwise = 0 
+    ay | a == 2 = accPlus
+       | a == 4 = - accPlus
+       | otherwise = 0
 
 
 
